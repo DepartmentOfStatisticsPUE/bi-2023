@@ -1,0 +1,131 @@
+---
+title: "Symulacje -- wybrane artykuły"
+format: 
+  html:
+    self-contained: true
+    table-of-contents: true
+    number-sections: true
+editor: visual
+execute: 
+  eval: true
+  warning: false
+  message: false
+toc-title: Spis treści
+bibliography: references.bib
+lang: pl
+---
+
+# Artykuł @kim2018
+
+## Omówienie
+
+-   Celem badania było zweryfikowanie skuteczności metod estymacji w
+    przypadku prób nielosowych.
+-   Metody zaproponowane przez Kim'a i Wang'a (2018) zakładają istnienie
+    dwóch prób: losowej (o liczebności 500 lub 1 000) oraz nielosowej.
+-   Próba losowa została wylosowania stosując losowanie proste bez
+    zwracania.
+-   Przynależność do próby losowej wylosowano zgodnie z rozkładem
+    Bernulliego ($\delta_i \sim Bern(p_i)$)
+-   Wielkość populacji ($N$) ustalono na 1 000 000.
+-   Zmienne objaśniające ($X_1$ i $X_2$) oraz błąd losowy ($\epsilon$)
+    były wygenerowane zgodnie z następującym układem
+
+$$
+\begin{aligned}
+X_1 & \sim N(1,1), \\
+X_2 & \sim Exp(1), \\ 
+\epsilon & \sim N(0,1).
+\end{aligned}
+$$
+
+-   Następnie wygenerowano dwie zmienne celu $Y_1$ i $Y_2$ według
+    następujących modeli
+
+$$
+\begin{aligned}
+Y_1 & = 1 + X_1 + X_2 + \epsilon, \\
+Y_2 & = 0.5(X_1-0.5)^2 + X_2 + \epsilon.
+\end{aligned}
+$$
+
+-   Identyfikator $\delta_i$ wylosowano z rozkładu Bernoullego zgodnie z
+    prawdopodobieństwem $p_i$ danym dwoma wzorami:
+
+$$
+\begin{aligned}
+\text{logit}(p_1) & = X_2, \quad \text{ czyli} \frac{\exp(X_2)}{1 + \exp(X_2)}, \\
+\text{logit}(p_2) & = -0.5 + 0.5(X_2-2)^2, \quad \text{czyli} \frac{\exp(-0.5 + 0.5(X_2-2)^2)}{1 + \exp(-0.5 + 0.5(X_2-2)^2)}.
+\end{aligned}
+$$
+
+
+## Implementacja w R
+
+Generowanie danych
+```{r}
+set.seed(123)
+N <- 1e6 ## 1000000
+x1 <- rnorm(n = N, mean = 1, sd = 1)
+x2 <- rexp(n = N, rate = 1)
+epsilon <- rnorm(n = N) # rnorm(N)
+y1 <- 1 + x1 + x2 + epsilon
+y2 <- 0.5*(x1 - 0.5)^2 + x2 + epsilon
+p1 <- exp(x2)/(1+exp(x2))
+p2 <- exp(-0.5+0.5*(x2-2)^2)/(1+exp(-0.5+0.5*(x2-2)^2))
+populacja <- data.frame(x1,x2,y1,y2,p1,p2)
+head(populacja)
+```
+
+Losowanie przynależności do big data
+
+```{r}
+set.seed(123)
+flag_bd1 <- rbinom(n = N, size = 1, prob = populacja$p1)
+table(flag_bd1)
+```
+
+oraz oszacowanie $\bar{y}$ na podstawie big data
+
+```{r}
+c("big data"=mean(populacja[flag_bd1 == 1, "y1"]), "wartość prawdziwa" = mean(y1))
+```
+
+
+## Przyjrzyjmy się danym
+
+Rozkład X2
+
+```{r}
+hist(x2, breaks = "scott")
+```
+
+Zależność między $X_1$, a $Y_2$
+```{r}
+## ograniczam liczbę punktów bo jest ich bardzo dużo (biorę 10k)
+set.seed(1234)
+los <- sample(1:N,10000, replace = F)
+plot(x1[los], y2[los],
+     xlab = "X_1",
+     ylab = "Y_2")
+```
+
+Histogram $p_1$ i $p_2$
+```{r}
+par(mfrow = c(1,2))
+hist(p1)
+hist(p2)
+```
+Wykresy funkcji dla $p_1$ i $p_2$
+
+```{r}
+curve(expr = exp(x)/(1+exp(x)), 
+      from = -5, to = 5,
+      ylab = "f(x)")
+curve(expr = exp(-0.5+0.5*(x-2)^2)/(1+exp(-0.5+0.5*(x-2)^2)), 
+      from = -5, to = 5,
+      add = TRUE,
+      col = "red",
+      ylab = "")
+```
+
