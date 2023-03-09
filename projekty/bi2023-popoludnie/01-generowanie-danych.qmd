@@ -1,0 +1,41 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+# Generujemy dane w R
+
+Aby wstawić kod R nalezy użyć skrótu: ctrl+alt+i
+
+```{r}
+set.seed(20230228)
+rnorm(10)
+```
+
+Generujemy dane według następującego schematu
+
+-   x1 z N(2,2)
+
+-   x2 z N(-2,1)
+
+-   epsilon z N(0,1)
+
+-   y = 1 + 2\*x1 + 3\*x2 + epsilon
+
+```{r}
+set.seed(20230228)
+pop_size <- 10000 ## wielkość populacji
+x1 <- rnorm(n=pop_size, mean=2,sd=2) ## x1 ~ N(2,2)
+x2 <- rnorm(n=pop_size, mean=-2,sd=1) ## x2 ~ N(-2,1)
+epsilon <- rnorm(n=pop_size) ## epsilon ~ N(0,1)
+y <- 1 + 2*x1 + 3*x2 + epsilon ## równanie dla y 
+df <- data.frame(x1, x2, y) ## ramka danych
+head(df)
+```
+
+Sprawdźmy czy regresja liniowa w R poprawnie oszacuje wektor parametrów beta = (1,2,3).
+
+```{r}
+lm(y~ x1 + x2, data=df)
+```
