@@ -189,6 +189,7 @@ X <- cbind(rep(1, N), X)
 
 ## parametry beta i alpha
 beta0 <- c(1, 0, 0, 1, 1, 1, 1, rep(0, p-7))
+beta1 <- c(1, 0, 0, 3, 3, 3, 3, rep(0, p-7))
 alpha0 <- c(-2, 1, 1, 1, 1, rep(0, p-5))
 alpha1 <- c(0, 0, 0, 3, 3, 3, 3, rep(0, p-7))
 
@@ -196,8 +197,8 @@ alpha1 <- c(0, 0, 0, 3, 3, 3, 3, rep(0, p-7))
 epsilon <- rnorm(N)
 Y_OM1 <- X %*% beta0 + epsilon
 Y_OM2 <- 1 + exp(3*sin(X %*% beta0)) + X[, 6] + X[, 5] + epsilon
-pi_Y_OM3 <- as.numeric(plogis(X %*% beta0))
-pi_Y_OM4 <- as.numeric(plogis(2-log((X %*% beta0)^2) + 2*X[,6] + 2*X[,7]))
+pi_Y_OM3 <- as.numeric(plogis(X %*% beta1))
+pi_Y_OM4 <- as.numeric(plogis(2-log((X %*% beta1)^2) + 2*X[,6] + 2*X[,7]))
 Y_OM3 <- rbinom(N, size = 1, prob = pi_Y_OM3)
 Y_OM4 <- rbinom(N, size = 1, prob = pi_Y_OM4)
 
