@@ -23,7 +23,7 @@ curve(
   ylab = "Błąd standardowy",
   xlab = expression(rho),
   ylim = c(0, 15),
-  main = "Ilustracja big data paradox (Meng 2018)"
+  main = "Ilustracja big data paradox (Meng 2018, N = 38 mln)"
 )
 
 f_share <- 0.01
@@ -37,7 +37,7 @@ curve(
 )
 abline(v = 0.001, h = 6.13, lty = 3, col = "red")
 abline(v = 0.005, h = 13.78, lty = 4, col = "black")
-legend(x = 0.003, y = 4, legend = c("próba losowa", "big data"), lty = 3:4, col = c("red", "black"))
+legend(x = 0.003, y = 4, legend = c("próba losowa (1%)", "big data (80%)"), lty = 3:4, col = c("red", "black"))
 ```
 
 
