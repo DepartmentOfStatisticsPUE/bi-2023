@@ -7,7 +7,7 @@
 3. Web-scraping: [kody na zajęcia](https://htmlpreview.github.io/?https://github.com/DepartmentOfStatisticsPUE/bi-2023/blob/main/notebooks/03-webscraping.html)
 4. Reprezentatywność: [materiały do zajęć](https://htmlpreview.github.io/?https://github.com/DepartmentOfStatisticsPUE/bi-2023/blob/main/notebooks/04-reprezentatywnosc.html)
 5. Metody quasi-randomizacyjne:
-    + post-stratyfikacja
+    + post-stratyfikacja [materiały do zajęć](https://htmlpreview.github.io/?https://github.com/DepartmentOfStatisticsPUE/bi-2023/blob/main/notebooks/05-poststrat.html)
     + kalibracja
     + propensity score weighting
 6. Model oparte na modelu:

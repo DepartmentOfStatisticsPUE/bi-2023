@@ -1,0 +1,220 @@
+---
+title: "Metody quasi-randomizacyjne: post-stratyfikacja"
+format: 
+  html:
+    self-contained: true
+    table-of-contents: true
+    number-sections: true
+editor: visual
+execute: 
+  eval: true
+  warning: false
+  message: false
+toc-title: Spis treści
+
+lang: pl
+---
+
+# Wprowadzenie
+
+Wczytujemy pakiet `tidyverse`.
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(survey)
+library(Hmisc) ## wtd.var to calculate weighted variance
+```
+
+Wczytujemy dane na potrzeby przykładu. Dane zawierają następjące kolumny
+
++ id_popyt -- 
++ id_jednostki --
++ waga -- 
++ sek -- 
++ klasa_pr --
++ woj -- 
++ zawod_kod2 -- 
++ wolne_miejsca -- 
++ id_cbop -- 
++ jedna_zmiana -- 
++ wymiar_40 -- 
++ wolne_miejsca_cbop --
++ wolne_miejsca_niepeln_cbop --
+
+```{r}
+dane <- read_csv("../data/popyt-zajecia-dane.csv")
+```
+
+```{r, echo=FALSE}
+kable(head(dane))
+```
+
+# Przykłady
+
+## Prosty przykład na potrzeby wykładów
+
+1. Wyznaczamy wielkość populacji -- estymowana liczba wakatów.
+
+```{r}
+dane |>
+  filter(!is.na(id_popyt)) |>
+  count(klasa_pr, wt = wolne_miejsca*waga, name = "N") -> pop_data
+
+```
+
+```{r, echo=FALSE}
+kable(pop_data)
+```
+
+2. Wyznaczamy odsetek wakatów oferowanych na jedną zmianę.
+
+```{r}
+dane |>
+  filter(!is.na(id_cbop)) |> 
+  group_by(klasa_pr) |>
+  summarise(y = weighted.mean(jedna_zmiana, wolne_miejsca_cbop),
+            y_var = wtd.var(jedna_zmiana, wolne_miejsca_cbop),
+            n = sum(wolne_miejsca_cbop)) -> tab_cbop
+```
+
+```{r, echo=FALSE}
+kable(tab_cbop)
+```
+
+3. Dodajemy informację o wielkości populacji.
+
+```{r}
+tab_cbop |>
+  left_join(pop_data, by = "klasa_pr") |>
+  mutate(W_h = N/sum(N))  -> tab_przyklad
+
+```
+
+```{r, echo=FALSE}
+kable(tab_przyklad)
+```
+
+4. Wyznaczamy dwa estymatory odsetka wakatów oferowanych na jedną zmianę: `y_naive` -- zwykła średnia ze zbioru danych, `y_ps` -- estymator post-stratyfikowany. Wyznaczamy również wariancję zgodnie ze wzorem
+
+$$
+V\left(\bar{y}_{PS}\right)=\left(\frac{1}{n}-\frac{1}{N}\right) \sum_{h=1}^{L} W_{h} S_{h}^{2}+\frac{1}{n^{2}} \sum_{h=1}^{L}\left(1-W_{h}\right) S_{h}^{2}
+$$
+
+
+
+```{r}
+tab_przyklad |>
+  summarise(y_naive = weighted.mean(y, n),
+            y_ps = sum(y*W_h),
+            y_ps_var = (1/sum(n) - 1/sum(N))*sum(W_h*y_var) + 1/sum(n)^2*sum((1-W_h)*y_var),
+            y_ps_sd = sqrt(y_ps_var)) -> wynik
+```
+
+
+```{r, echo=FALSE}
+kable(wynik)
+```
+
+## Przykład z wykorzystaniem pakietu survey
+
+1. Tworzymy podzbiór z potrzebnymi danymi, w której kolumnę `wolne_miejsca_cbop` traktujemy jako wagę wejściową ponieważ jeden wiersz odpowiada za jednen lub więcej wakatów. 
+
+```{r}
+dane |>
+  filter(is.na(id_popyt)) |>
+  select(id_jednostki, klasa_pr, sek, woj, zawod_kod2, wolne_miejsca_cbop, jedna_zmiana) |>
+  mutate(jedna_zmiana=as.numeric(jedna_zmiana)) -> cbop_df
+```
+
+
+```{r, echo=FALSE}
+kable(head(cbop_df))
+```
+
+
+2. Tworzymy obiekt `svydesign`
+
+```{r}
+cbop_svy <- svydesign(ids = ~1, 
+                      weights = ~ wolne_miejsca_cbop,
+                      data = cbop_df)
+cbop_svy
+```
+
+3. Estymator naiwny na podstawie danych jednostkowych
+
+```{r}
+svymean(~jedna_zmiana, cbop_svy)
+```
+
+### Post-stratyfikacja z wykorzystaniem zmiennej `klasa_pr`
+
+1. Wyznaczamy wartości globalne na potrzeby post-stratyfikacji zgodnie z wymogami funkcji `postStratify`
+
+```{r}
+pop_totals <- xtabs(wolne_miejsca*waga ~ klasa_pr, data= dane, subset = !is.na(id_popyt))
+pop_totals
+```
+
+2. Dokonujemy post-stratyfikacji
+```{r}
+cbop_svy_ps <- postStratify(cbop_svy, strata = ~klasa_pr, population = pop_totals)
+cbop_svy_ps
+```
+
+3. Estymator post-stratyfikacyjny
+
+```{r}
+svymean(~jedna_zmiana, cbop_svy_ps)
+```
+
+
+### Post-stratyfikacja z wykorzystaniem większej liczby zmiennych
+
+1. Wyznaczamy wartości globalne na potrzeby post-stratyfikacji zgodnie z wymogami funkcji `postStratify` dla dwóch zmiennych
+
+```{r}
+pop_totals2 <- xtabs(wolne_miejsca*waga ~ klasa_pr + zawod_kod2, data= dane, subset = !is.na(id_popyt))
+pop_totals2
+```
+2. Dokonujemy post-stratyfikacji z wykorzystaniem dwóch zmiennych
+
+```{r}
+cbop_svy_ps2 <- postStratify(cbop_svy, strata = ~klasa_pr + zawod_kod2, population = pop_totals2)
+cbop_svy_ps2
+```
+
+3. Sprawdzamy czy uzyskane wagi odzwierciedlają wartości globalne `pop_totals2`
+
+```{r}
+svytable( ~klasa_pr + zawod_kod2, cbop_svy_ps2)
+```
+4. Możemy również porównać wagi wejściowe (przed post-stratyfikacją) z wagami końcowymi (po post-stratyfikacji).
+
+
+```{r}
+summary(weights(cbop_svy_ps2)/weights(cbop_svy))
+```
+
+```{r}
+plot(weights(cbop_svy), weights(cbop_svy_ps2), xlab = "Wagi wejściowe (przed)", ylab = "Wagi wyjściowe (po)")
+abline(a=0,b=1,col="red")
+```
+
+5. Estymator post-stratyfikacyjny
+
+```{r}
+svymean(~jedna_zmiana, cbop_svy_ps2)
+```
+
+# Badanie symulacyjne
+
+
+# Podsumowanie
+
++ Post-stratyfikacja wymaga znajomości wartości globalnych.
++ Post-stratyfikacja nie wymaga skomplikowanych procedur (można to zrobić w bazie SQL/MS Excel).
++ Estymator wariancji estymatora post-stratyfikacyjnego zakłada, że próba nielosowa jest próbą prostą z populacji.
+
+
