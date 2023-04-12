@@ -26,21 +26,7 @@ library(survey)
 library(Hmisc) ## wtd.var to calculate weighted variance
 ```
 
-Wczytujemy dane na potrzeby przykładu. Dane zawierają następjące kolumny
-
-+ id_popyt -- 
-+ id_jednostki --
-+ waga -- 
-+ sek -- 
-+ klasa_pr --
-+ woj -- 
-+ zawod_kod2 -- 
-+ wolne_miejsca -- 
-+ id_cbop -- 
-+ jedna_zmiana -- 
-+ wymiar_40 -- 
-+ wolne_miejsca_cbop --
-+ wolne_miejsca_niepeln_cbop --
+Wczytujemy dane na potrzeby zajęć.
 
 ```{r}
 dane <- read_csv("../data/popyt-zajecia-dane.csv")
