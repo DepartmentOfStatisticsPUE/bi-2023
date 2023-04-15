@@ -1,5 +1,6 @@
 # Badania Internetowe 2022/23
 
+
 ## Symabus i materiały
 
 1. Symulacje na podstawie artykułów:
