@@ -196,6 +196,101 @@ svymean(~jedna_zmiana, cbop_svy_ps2)
 
 # Badanie symulacyjne
 
+## Definicja procesu generowania danych
+
+Rozważmy następujący układ:
+
++ Wielkość populacji $N=10000$
++ Dwie cechy $X$:
+
+$$
+\begin{align}
+X_1 & \sim \text{Bernoulli}(0.7) \\
+X_2 & \sim \text{Bernoulli}(0.9)  \\
+\end{align}
+$$
++ Model dla cechy Y 
+
+$$
+Y = 4.5 - 3.5X_1 + 0.5X_2 + \epsilon; \quad \epsilon \sim N(0,1)
+$$
+
++ Próba nielosowa o wielkości $n_b=1000$ jest losowana proporcjonalnie do cechy $Y$, gdzie prawdopodobieństwo wylosowania danego rekordu określone jest w następujący sposób:
+
+$$
+P(R_i = 1) = \frac{|y_i|}{\sum_{i=1}^N |y_i|}
+$$
+Dla tak uzyskanej próby nielosowej należy:
+
++ ocenić różnice w rozkładach X między próbą, a populacją,
++ ocenic zależność między cechą X1 i X2
++ dokonać post-stratyfikacji z wykorzystaniem pakietu `survey`.
+
+## Rozwiązanie
+
+Kod R do generowania danych
+
+```{r}
+set.seed(2023)
+N <- 10000
+nb <- 1000
+X1 <- rbinom(N, 1, 0.7)
+X2 <- rbinom(N, 1, 0.9)
+Y <- 4.5 - 3.5*X1+0.5*X2 + rnorm(N)
+nb_inds <- sample(1:N, size = nb, prob = abs(Y)/sum(abs(Y)))
+flag <- 1:N %in% nb_inds
+w_star <- N/nb ## dodajemy pseudo-wagę jako relację miedzy N / nb
+df <- data.frame(Y,X1,X2,flag,w_star)
+head(df)
+```
+
+Porównajmy rozkłady $X_1$ i $X_2$
+
+```{r}
+pop_X1 <- mean(df$X1)
+pop_X2 <- mean(df$X2)
+sam_X1 <- mean(df$X1[df$flag == 1])
+sam_X2 <- mean(df$X2[df$flag == 1])
+c(X1_pop = pop_X1, X2_pop = pop_X2, X1_proba = sam_X1, X2_proba = sam_X2)
+```
+
+Wniosek: główna rozbieżność w zmiennej `X1`, w `X2` niezbyt.
+
+```{r}
+totale <- xtabs(~X1 + X2, data = df)
+dd <- svydesign(ids= ~1, weights = ~w_star, data = subset(df, flag == T))
+dd2 <- postStratify(dd, strata= ~X1+X2, population = totale)
+c(Y_prawda = mean(Y), Y_bez_ps = svymean(~Y, dd)[1], Y_ps = svymean(~Y, dd2)[1])
+```
+
+Zredukowano obciążenie ale częściowo dlatego, że dobór próby był wyłącznie zależny od cechy Y, a nie od X1 i X2.
+
+Wykonajmy to ćwiczenie 500 razy
+
+```{r}
+R <- 500
+y_naive <- numeric(R)
+y_ps <- numeric(R)
+for (r in 1:500) {
+  nb_inds <- sample(1:N, size = nb, prob = abs(Y)/sum(abs(Y)))
+  flag <- 1:N %in% nb_inds
+  w_star <- N/nb ## dodajemy pseudo-wagę jako relację miedzy N / nb
+  df <- data.frame(Y,X1,X2,flag,w_star)
+  
+  dd <- svydesign(ids= ~1, weights = ~w_star, data = subset(df, flag == T))
+  dd2 <- postStratify(dd, strata= ~X1+X2, population = totale)
+  
+  y_naive[r] <- svymean(~Y, dd)[1]
+  y_ps[r] <- svymean(~Y, dd2)[1]
+}
+
+boxplot((cbind(y_naive, y_ps) - mean(Y))/mean(Y)*100, xlab = "Estymator", y = "Relatywne obciążenie (w %)")
+```
+
+```{r}
+c(mean(Y), mean(y_naive), mean(y_ps))
+```
+
 
 # Podsumowanie
 
