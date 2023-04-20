@@ -329,19 +329,21 @@ for (r in 1:500) {
   y_ps[r] <- svymean(~Y, dd2)[1]
 }
 
-boxplot((cbind(y_naive, y_ps) - mean(Y))/mean(Y)*100, xlab = "Estymator", y = "Relatywne obciążenie (w %)")
+boxplot((cbind("Naiwny"=y_naive, "PS"=y_ps) - mean(Y))/mean(Y)*100, 
+        xlab = "Estymator", ylab = "Relatywne obciążenie (w %)",
+        ylim = c(0, 70))
+
 ```
 
 Wyniki symulacji
 
 ```{r}
 oszacowanie <- c(mean(y_naive), mean(y_ps))
-obciazenie <- c(mean(y_naive), mean(y_ps)) -mean(Y)
+obciazenie <- oszacowanie -mean(Y)
 wariancja <- c(var(y_naive), var(y_ps))
-rmse <- c(sqrt(obciazenie^2+wariancja))
-data.frame(estymator=c("naiwny", "poststratyfikacyjny"), oszacowanie, obciazenie, wariancja, rmse)
+rmse <- sqrt(obciazenie^2+wariancja)
+data.frame(estymator=c("Naiwny", "PS"), oszacowanie, obciazenie, wariancja, rmse)
 ```
-
 
 # Podsumowanie
 
