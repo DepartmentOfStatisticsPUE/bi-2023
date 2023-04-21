@@ -1,0 +1,263 @@
+---
+title: "Metody quasi-randomizacyjne: post-stratyfikacja"
+format: 
+  html:
+    self-contained: true
+    table-of-contents: true
+    number-sections: true
+editor: visual
+execute: 
+  eval: true
+  warning: false
+  message: false
+toc-title: Spis treści
+
+lang: pl
+---
+
+
+# Wprowadzenie
+
+Wczytujemy pakiet `tidyverse`.
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(survey)
+```
+
+Wczytujemy dane na potrzeby zajęć.
+
+```{r}
+dane <- read_csv("../data/popyt-zajecia-dane.csv")
+```
+
+```{r, echo=FALSE}
+kable(head(dane))
+```
+
+# Przykłady
+
+## Przykład z wykorzystaniem pakietu survey
+
+1. Tworzymy podzbiór z potrzebnymi danymi, w której kolumnę `wolne_miejsca_cbop` traktujemy jako wagę wejściową ponieważ jeden wiersz odpowiada za jednen lub więcej wakatów. 
+
+```{r}
+dane |>
+  filter(is.na(id_popyt)) |>
+  select(id_jednostki, klasa_pr, sek, woj, zawod_kod2, wolne_miejsca_cbop, jedna_zmiana) |>
+  mutate(jedna_zmiana=as.numeric(jedna_zmiana)) -> cbop_df
+```
+
+```{r, echo=FALSE}
+kable(head(cbop_df))
+```
+
+
+2. Tworzymy obiekt `svydesign`
+
+```{r}
+cbop_svy <- svydesign(ids = ~1, 
+                      weights = ~ wolne_miejsca_cbop,
+                      data = cbop_df)
+cbop_svy
+```
+
+3. Estymator naiwny na podstawie danych jednostkowych
+
+```{r}
+svymean(~jedna_zmiana, cbop_svy)
+```
+
+
+### Kalibracja z wykorzystaniem zmiennej `klasa_pr`
+
+1. Wyznaczamy wartości globalne na potrzeby post-stratyfikacji zgodnie z wymogami funkcji `postStratify`
+
+```{r}
+pop_totals <- xtabs(wolne_miejsca*waga ~ klasa_pr, data= dane, subset = !is.na(id_popyt))
+pop_totals
+```
+
+2. Dokonujemy kalibracji
+
++ sposób 1 -- podajemy wektor z danymi (zwykle w przypadku jednej zmiennej)
+
+```{r}
+cbop_svy_cal <- calibrate(cbop_svy, 
+                          formula = ~klasa_pr, 
+                          population = c(`(Intercept)`=sum(pop_totals),
+                                         klasa_prM = 128940,
+                                         klasa_prS = 71230))
+cbop_svy_cal
+```
+
++ sposób 2 -- podajemy formułę ale musimy zapisać w formie obiektu `list`
+
+```{r}
+cbop_svy_cal <- calibrate(cbop_svy, list(~klasa_pr), population = list(pop_totals))
+cbop_svy_cal
+```
+
+3. Estymator kalibracyjny
+
+```{r}
+svymean(~jedna_zmiana, cbop_svy_cal)
+```
+
+
+### Kalibracja z wykorzystaniem większej liczby zmiennych
+
+# Badanie symulacyjne
+
+## Definicja procesu generowania danych
+
+Rozważmy następujący układ:
+
++ Wielkość populacji $N=10000$
++ Dwie cechy $X$:
+
+$$
+\begin{align}
+X_1 & \sim \text{Bernoulli}(0.7) \\
+X_2 & \sim \text{Bernoulli}(0.9)  \\
+\end{align}
+$$
++ Model dla cechy Y 
+
+$$
+Y = 4.5 - 3.5X_1 + 0.5X_2 + \epsilon; \quad \epsilon \sim N(0,1)
+$$
+
++ Próba nielosowa o wielkości $n_b=1000$ jest generowana proporcjonalnie do cechy $Y$, gdzie prawdopodobieństwo wylosowania danego rekordu określone jest w następujący sposób:
+
+$$
+P(R_i = 1) = \frac{|y_i|}{\sum_{i=1}^N |y_i|}
+$$
+Dla tak uzyskanej próby nielosowej należy:
+
++ ocenić różnice w rozkładach X między próbą, a populacją,
++ ocenić zależność między cechą X1 i X2
++ dokonać post-stratyfikacji z wykorzystaniem pakietu `survey`.
+
+## Rozwiązanie
+
+Kod R do generowania danych
+
+```{r}
+set.seed(2023)
+N <- 10000
+nb <- 1000
+X1 <- rbinom(N, 1, 0.7)
+X2 <- rbinom(N, 1, 0.9)
+Y <- 4.5 - 3.5*X1+0.5*X2 + rnorm(N)
+nb_inds <- sample(1:N, size = nb, prob = abs(Y)/sum(abs(Y)))
+flag <- 1:N %in% nb_inds
+w_star <- N/nb ## dodajemy pseudo-wagę jako relację miedzy N / nb
+df <- data.frame(Y,X1,X2,flag,w_star)
+head(df)
+```
+
+Porównajmy rozkłady $X_1$ i $X_2$
+
+```{r}
+pop_X1 <- mean(df$X1)
+pop_X2 <- mean(df$X2)
+sam_X1 <- mean(df$X1[df$flag == 1])
+sam_X2 <- mean(df$X2[df$flag == 1])
+c(X1_pop = pop_X1, X2_pop = pop_X2, X1_proba = sam_X1, X2_proba = sam_X2)
+```
+
+Rozkład łączny $X_1$ i $X_2$ -- różnica w odsetkach między próbą, a populacją.
+
+```{r}
+prop.table(xtabs(~X1 + X2, df, subset = flag == T)) - prop.table(xtabs(~X1 + X2, df)) 
+```
+Jaka jest zależność między $Y$, a $X_1$ oraz $X_2$? 
+
+```{r}
+m1 <- lm(Y ~ X1 + X2, data = df, subset = flag == TRUE)
+summary(m1)
+```
+Funkcją anova możemy sprawdzić jak dana zmienna wpływa na redukcję sumy kwadratów odchyleń (SSQ).
+
+```{r}
+anova(m1)
+```
+
+Wnioski:
+
++   główna rozbieżność w zmiennej $X_1$, w $X_2$ niezbyt,
++ zmienna $X_1$ jest silniej skorelowana z $Y$ niż $X_2$.
+
+Dokonujemy kalibracji i post-stratyfikacji wg dwóch zmiennych
+
+```{r}
+totale <- xtabs(~X1 + X2, data = df)
+dd <- svydesign(ids= ~1, weights = ~w_star, data = subset(df, flag == T))
+dd2 <- postStratify(dd, strata= ~X1+X2, population = totale)
+c(Y_prawda = mean(Y), Y_bez_ps = svymean(~Y, dd)[1], Y_ps = svymean(~Y, dd2)[1])
+```
+
+Jeżeli użyjemy wyłącznie $X_1$ uzyskamy następujące wyniki
+
+```{r}
+totale <- xtabs(~X1 , data = df)
+dd <- svydesign(ids= ~1, weights = ~w_star, data = subset(df, flag == T))
+dd2 <- postStratify(dd, strata= ~X1, population = totale)
+c(Y_prawda = mean(Y), Y_bez_ps = svymean(~Y, dd)[1], Y_ps = svymean(~Y, dd2)[1])
+```
+
+Jeżeli użyjemy wyłącznie $X_2$ uzyskamy następujące wyniki
+
+
+```{r}
+totale <- xtabs(~X2 , data = df)
+dd <- svydesign(ids= ~1, weights = ~w_star, data = subset(df, flag == T))
+dd2 <- postStratify(dd, strata= ~X2, population = totale)
+c(Y_prawda = mean(Y), Y_bez_ps = svymean(~Y, dd)[1], Y_ps = svymean(~Y, dd2)[1])
+```
+
+Wnioski:
+
++ użycie $X_1$ redukuje obciązenie, a $X_2$ nie wpływa na wyniki,
++ zredukowano obciążenie ale częściowo dlatego, że dobór próby był wyłącznie zależny od cechy Y, a nie od X1 i X2.
+
+Wykonajmy to ćwiczenie 500 razy
+
+```{r}
+R <- 500
+y_naive <- numeric(R)
+y_ps <- numeric(R)
+totale <- xtabs(~X1+X2 , data = df)
+for (r in 1:500) {
+  nb_inds <- sample(1:N, size = nb, prob = abs(Y)/sum(abs(Y)))
+  flag <- 1:N %in% nb_inds
+  w_star <- N/nb ## dodajemy pseudo-wagę jako relację miedzy N / nb
+  df <- data.frame(Y,X1,X2,flag,w_star)
+  
+  dd <- svydesign(ids= ~1, weights = ~w_star, data = subset(df, flag == T))
+  dd2 <- postStratify(dd, strata= ~X1+X2, population = totale)
+  
+  y_naive[r] <- svymean(~Y, dd)[1]
+  y_ps[r] <- svymean(~Y, dd2)[1]
+}
+
+boxplot((cbind("Naiwny"=y_naive, "PS"=y_ps) - mean(Y))/mean(Y)*100, 
+        xlab = "Estymator", ylab = "Relatywne obciążenie (w %)",
+        ylim = c(0, 70))
+
+```
+
+Wyniki symulacji
+
+```{r}
+oszacowanie <- c(mean(y_naive), mean(y_ps))
+obciazenie <- oszacowanie -mean(Y)
+wariancja <- c(var(y_naive), var(y_ps))
+rmse <- sqrt(obciazenie^2+wariancja)
+data.frame(estymator=c("Naiwny", "PS"), oszacowanie, obciazenie, wariancja, rmse)
+```
+
+
+# Podsumowanie
