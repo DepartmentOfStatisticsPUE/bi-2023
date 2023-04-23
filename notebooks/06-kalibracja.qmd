@@ -341,13 +341,15 @@ Wnioski:
 +   główna rozbieżność w zmiennej $X_1$, w $X_2$ niezbyt,
 + zmienna $X_1$ jest silniej skorelowana z $Y$ niż $X_2$.
 
-Dokonujemy kalibracji i post-stratyfikacji wg dwóch zmiennych
+Dokonujemy kalibracji i kalibracji wg dwóch zmiennych
 
 ```{r}
+df$X1 <- as.factor(df$X1)
+df$X2 <- as.factor(df$X2)
 totale <- xtabs(~X1 + X2, data = df)
 dd <- svydesign(ids= ~1, weights = ~w_star, data = subset(df, flag == T))
-dd2 <- postStratify(dd, strata= ~X1+X2, population = totale)
-c(Y_prawda = mean(Y), Y_bez_ps = svymean(~Y, dd)[1], Y_ps = svymean(~Y, dd2)[1])
+dd2 <- calibrate(dd, formula= list(~X1+X2), population = list(totale))
+c(Y_prawda = mean(Y), Y_bez_cal = svymean(~Y, dd)[1], Y_cal = svymean(~Y, dd2)[1])
 ```
 
 Jeżeli użyjemy wyłącznie $X_1$ uzyskamy następujące wyniki
@@ -355,8 +357,8 @@ Jeżeli użyjemy wyłącznie $X_1$ uzyskamy następujące wyniki
 ```{r}
 totale <- xtabs(~X1 , data = df)
 dd <- svydesign(ids= ~1, weights = ~w_star, data = subset(df, flag == T))
-dd2 <- postStratify(dd, strata= ~X1, population = totale)
-c(Y_prawda = mean(Y), Y_bez_ps = svymean(~Y, dd)[1], Y_ps = svymean(~Y, dd2)[1])
+dd2 <- calibrate(dd, formula= list(~X1), population = list(totale))
+c(Y_prawda = mean(Y), Y_bez_cal = svymean(~Y, dd)[1], Y_cal = svymean(~Y, dd2)[1])
 ```
 
 Jeżeli użyjemy wyłącznie $X_2$ uzyskamy następujące wyniki
@@ -377,24 +379,30 @@ Wnioski:
 Wykonajmy to ćwiczenie 500 razy
 
 ```{r}
+set.seed(1234)
 R <- 500
 y_naive <- numeric(R)
 y_ps <- numeric(R)
+y_cal <- numeric(R)
 totale <- xtabs(~X1+X2 , data = df)
 for (r in 1:500) {
   nb_inds <- sample(1:N, size = nb, prob = abs(Y)/sum(abs(Y)))
   flag <- 1:N %in% nb_inds
   w_star <- N/nb ## dodajemy pseudo-wagę jako relację miedzy N / nb
   df <- data.frame(Y,X1,X2,flag,w_star)
-  
+  df$X1 <- as.factor(df$X1)
+  df$X2 <- as.factor(df$X2)
   dd <- svydesign(ids= ~1, weights = ~w_star, data = subset(df, flag == T))
   dd2 <- postStratify(dd, strata= ~X1+X2, population = totale)
+  dd3 <- calibrate(dd, formula= list(~X1+X2), population = list(totale))
+  
   
   y_naive[r] <- svymean(~Y, dd)[1]
   y_ps[r] <- svymean(~Y, dd2)[1]
+  y_cal[r] <- svymean(~Y, dd2)[1]
 }
 
-boxplot((cbind("Naiwny"=y_naive, "PS"=y_ps) - mean(Y))/mean(Y)*100, 
+boxplot((cbind("Naiwny"=y_naive, "PS"=y_ps, "Kalibracyjny"=y_cal) - mean(Y))/mean(Y)*100, 
         xlab = "Estymator", ylab = "Relatywne obciążenie (w %)",
         ylim = c(0, 70))
 
@@ -403,11 +411,11 @@ boxplot((cbind("Naiwny"=y_naive, "PS"=y_ps) - mean(Y))/mean(Y)*100,
 Wyniki symulacji
 
 ```{r}
-oszacowanie <- c(mean(y_naive), mean(y_ps))
+oszacowanie <- c(mean(y_naive), mean(y_ps), mean(y_cal))
 obciazenie <- oszacowanie -mean(Y)
-wariancja <- c(var(y_naive), var(y_ps))
+wariancja <- c(var(y_naive), var(y_ps), var(y_cal))
 rmse <- sqrt(obciazenie^2+wariancja)
-data.frame(estymator=c("Naiwny", "PS"), oszacowanie, obciazenie, wariancja, rmse)
+data.frame(estymator=c("Naiwny", "PS", "Kalibracyjny"), oszacowanie, obciazenie, wariancja, rmse)
 ```
 
 
