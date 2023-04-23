@@ -11,7 +11,7 @@
 4. Reprezentatywność: [materiały do zajęć](https://htmlpreview.github.io/?https://github.com/DepartmentOfStatisticsPUE/bi-2023/blob/main/notebooks/04-reprezentatywnosc.html)
 5. Metody quasi-randomizacyjne:
     + post-stratyfikacja [materiały do zajęć](https://htmlpreview.github.io/?https://github.com/DepartmentOfStatisticsPUE/bi-2023/blob/main/notebooks/05-poststrat.html)
-    + kalibracja
+    + kalibracja [materiały do zajęć](https://htmlpreview.github.io/?https://github.com/DepartmentOfStatisticsPUE/bi-2023/blob/main/notebooks/06-kalibracja.html)
     + propensity score weighting
 6. Model oparte na modelu:
     + masowa imputacja -- najbliższy sąsiad
