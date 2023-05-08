@@ -1,5 +1,5 @@
 ---
-title: "Metody quasi-randomizacyjne: kalibracja"
+title: "Metody quasi-randomizacyjne: propensity score"
 format: 
   html:
     self-contained: true
@@ -12,7 +12,6 @@ execute:
   warning: false
   message: false
 toc-title: Spis treści
-
 lang: pl
 ---
 
