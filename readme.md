@@ -12,7 +12,7 @@
 5. Metody quasi-randomizacyjne:
     + post-stratyfikacja [materiały do zajęć](https://htmlpreview.github.io/?https://github.com/DepartmentOfStatisticsPUE/bi-2023/blob/main/notebooks/05-poststrat.html)
     + kalibracja [materiały do zajęć](https://htmlpreview.github.io/?https://github.com/DepartmentOfStatisticsPUE/bi-2023/blob/main/notebooks/06-kalibracja.html)
-    + propensity score weighting
+    + propensity score weighting/inverse probability weighting [materiały do zajęć](https://htmlpreview.github.io/?https://github.com/DepartmentOfStatisticsPUE/bi-2023/blob/main/notebooks/07-prop-score.html)
 6. Model oparte na modelu:
     + masowa imputacja -- najbliższy sąsiad
     + masowa imputacja -- model
