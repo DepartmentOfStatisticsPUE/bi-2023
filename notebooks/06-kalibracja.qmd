@@ -5,6 +5,7 @@ format:
     self-contained: true
     table-of-contents: true
     number-sections: true
+    df-print: kable
 editor: visual
 execute: 
   eval: true
@@ -32,11 +33,9 @@ Wczytujemy dane na potrzeby zajęć.
 dane <- read_csv("../data/popyt-zajecia-dane.csv") |>
   mutate(zawod_kod2 = factor(zawod_kod2),
          jedna_zmiana=as.numeric(jedna_zmiana))
+head(dane)
 ```
 
-```{r, echo=FALSE}
-kable(head(dane))
-```
 
 # Przykłady
 
@@ -67,11 +66,9 @@ Opis wybranych argumentów:
 dane |>
   filter(is.na(id_popyt)) |>
   select(id_jednostki, klasa_pr, sek, woj, zawod_kod2, wolne_miejsca_cbop, jedna_zmiana) -> cbop_df
+head(cbop_df)
 ```
 
-```{r, echo=FALSE}
-kable(head(cbop_df))
-```
 
 
 2. Tworzymy obiekt `svydesign`
