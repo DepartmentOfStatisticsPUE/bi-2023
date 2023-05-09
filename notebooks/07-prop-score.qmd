@@ -1,5 +1,5 @@
 ---
-title: "Metody quasi-randomizacyjne: propensity score"
+title: "Metody quasi-randomizacyjne: propensity score weighting / inverse probability weighting"
 format: 
   html:
     self-contained: true
@@ -101,7 +101,7 @@ dane <- dane |>
 ```{r}
 dane |> 
   filter(R == TRUE) |>
-  summarise(estymator_ps = weighted.mean(jedna_zmiana, waga_estym),
+  summarise(estymator_ipw = weighted.mean(jedna_zmiana, waga_estym),
             suma_wag = sum(waga_estym))
 ```
 
@@ -123,24 +123,24 @@ pop_totals
 6. Post-stratyfikacja po regresji logistycznej
 
 ```{r}
-dane_ps <- dane |>
+dane_ipw <- dane |>
   filter(R == TRUE) |>
   add_count(klasa_pr, wt = waga_estym, name = "total") |>
-  mutate(total_ps = case_when(klasa_pr == "D" ~ (94124/total),
+  mutate(total_ipw = case_when(klasa_pr == "D" ~ (94124/total),
                               klasa_pr == "S" ~ 128940/total,
                               klasa_pr == "M" ~ 71230/total),
-         waga_ps = waga_estym*total_ps) 
-dane_ps
+         waga_ipw = waga_estym*total_ipw) 
+head(dane_ipw)
 ```
 
 7. Wynik po propensity score weighting / inverse probability weighting i post-stratyfikacji
 
 ```{r}
-dane_ps |> 
-  summarise(estymator_ps = weighted.mean(jedna_zmiana, waga_estym),
-            estymator_ps2 = weighted.mean(jedna_zmiana, waga_ps),
+dane_ipw |> 
+  summarise(estymator_ipw = weighted.mean(jedna_zmiana, waga_estym),
+            estymator_ipw_cal = weighted.mean(jedna_zmiana, waga_ipw),
             suma_wag = sum(waga_estym),
-            suma_wag_ps = sum(waga_ps))
+            suma_wag_ipw = sum(waga_ipw))
 ```
 
 ## Wykorzystanie regresji logistycznej -- więcej zmiennych
@@ -181,7 +181,7 @@ dane <- dane |>
 ```{r}
 dane |> 
   filter(R == TRUE) |>
-  summarise(estymator_ps = weighted.mean(jedna_zmiana, waga_estym),
+  summarise(estymator_ipw = weighted.mean(jedna_zmiana, waga_estym),
             suma_wag = sum(waga_estym))
 ```
 5. Korekta wag z wykorzystaniem kalibracji
