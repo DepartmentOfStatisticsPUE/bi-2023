@@ -37,8 +37,9 @@ library(nonprobsvy)
 
 Wczytujemy dane na potrzeby zajęć oraz dodajemy nowe zmienne:
 
-+ `R` -- informacja czy rekord przynależy do zbioru CBOP
-+ `waga_do_modelu` -- zmienna, którą wykorzystamy do określenia, że dany rekord dotyczy więcej niż jednego wakatu
+-   `R` -- informacja czy rekord przynależy do zbioru CBOP
+-   `waga_do_modelu` -- zmienna, którą wykorzystamy do określenia, że
+    dany rekord dotyczy więcej niż jednego wakatu
 
 ```{r}
 dane <- read_csv("../data/popyt-zajecia-dane.csv") |>
@@ -50,21 +51,21 @@ dane <- read_csv("../data/popyt-zajecia-dane.csv") |>
 head(dane)
 ```
 
-
 # Przykłady
 
 W poniższych przykładach zakładamy:
 
-+ zmienne X takie jak sektor, klasa_pr, sekc_pkd, woj oraz zawod_kod2 są mierzone bez błędów,
-+ zakładamy, że jednostki oraz ich wolne miejsca pracy występują wyłącznie w jednym zbiorze danych,
-+ R=1 oznacza czy wakat pojawił się w CBOP, 0 w przeciwnym wypadku,
-+ w regresji logistycznej wykorzystamy zmienne dotyczące zarówno charakterystyk podmiotów, jak i wakatów (`zawod_kod2`).
-
-
+-   zmienne X takie jak sektor, klasa_pr, sekc_pkd, woj oraz zawod_kod2
+    są mierzone bez błędów,
+-   zakładamy, że jednostki oraz ich wolne miejsca pracy występują
+    wyłącznie w jednym zbiorze danych,
+-   R=1 oznacza czy wakat pojawił się w CBOP, 0 w przeciwnym wypadku,
+-   w regresji logistycznej wykorzystamy zmienne dotyczące zarówno
+    charakterystyk podmiotów, jak i wakatów (`zawod_kod2`).
 
 ## Wykorzystanie regresji logistycznej -- jedna zmienna
 
-1. Budujemy model regresji logistycznej
+1.  Budujemy model regresji logistycznej
 
 ```{r}
 model1 <- glm(
@@ -76,7 +77,7 @@ model1 <- glm(
 summary(model1)
 ```
 
-2. Wyciągamy informację o prawdopodobieństwach przynależności
+2.  Wyciągamy informację o prawdopodobieństwach przynależności
 
 ```{r}
 est_probs <- fitted(model1)
@@ -89,14 +90,14 @@ Wagi
 table(1/est_probs)
 ```
 
-3. Dodajemy informację o wagach do zbioru danych
+3.  Dodajemy informację o wagach do zbioru danych
 
 ```{r}
 dane <- dane |> 
   mutate(waga_estym = 1/predict(model1, dane, type="response"))
 ```
 
-4. Estymujemy liczbę wolnych miejsc pracy
+4.  Estymujemy liczbę wolnych miejsc pracy
 
 ```{r}
 dane |> 
@@ -105,7 +106,7 @@ dane |>
             suma_wag = sum(waga_estym))
 ```
 
-5. Czy wagi otwarzają liczbę wolnych miejsc pracy wg tej zmiennej?
+5.  Czy wagi otwarzają liczbę wolnych miejsc pracy wg tej zmiennej?
 
 ```{r}
 dane |>
@@ -120,7 +121,7 @@ pop_totals <- xtabs(wolne_miejsca*waga ~ klasa_pr, data= dane, subset = !is.na(i
 pop_totals
 ```
 
-6. Post-stratyfikacja po regresji logistycznej
+6.  Post-stratyfikacja po regresji logistycznej
 
 ```{r}
 dane_ipw <- dane |>
@@ -133,7 +134,8 @@ dane_ipw <- dane |>
 head(dane_ipw)
 ```
 
-7. Wynik po propensity score weighting / inverse probability weighting i post-stratyfikacji
+7.  Wynik po propensity score weighting / inverse probability weighting
+    i post-stratyfikacji
 
 ```{r}
 dane_ipw |> 
@@ -145,7 +147,7 @@ dane_ipw |>
 
 ## Wykorzystanie regresji logistycznej -- więcej zmiennych
 
-1. Budujemy model regresji logistycznej
+1.  Budujemy model regresji logistycznej
 
 ```{r}
 model2 <- glm(
@@ -156,7 +158,8 @@ model2 <- glm(
 )
 summary(model2)
 ```
-2. Wyciągamy informację o prawdopodobieństwach przynależności
+
+2.  Wyciągamy informację o prawdopodobieństwach przynależności
 
 ```{r}
 est_probs <- fitted(model2)
@@ -169,14 +172,14 @@ Wagi
 summary(1/est_probs)
 ```
 
-3. Dodajemy informację o wagach do zbioru danych
+3.  Dodajemy informację o wagach do zbioru danych
 
 ```{r}
 dane <- dane |> 
   mutate(waga_estym = 1/predict(model2, dane, type="response"))
 ```
 
-4. Estymujemy liczbę wolnych miejsc pracy
+4.  Estymujemy liczbę wolnych miejsc pracy
 
 ```{r}
 dane |> 
@@ -184,7 +187,8 @@ dane |>
   summarise(estymator_ipw = weighted.mean(jedna_zmiana, waga_estym),
             suma_wag = sum(waga_estym))
 ```
-5. Korekta wag z wykorzystaniem kalibracji
+
+5.  Korekta wag z wykorzystaniem kalibracji
 
 ```{r}
 pop_totals_klasa <- xtabs(wolne_miejsca*waga ~ klasa_pr, data= dane, subset = !is.na(id_popyt))
@@ -199,7 +203,6 @@ cbop_svy <- svydesign(ids= ~1,
                       weights = ~ waga_estym,
                       data = subset(dane,R == T))
 ```
-
 
 ```{r}
 #klasa_pr + sek + sekc_pkd + woj + zawod_kod2
@@ -219,6 +222,5 @@ svymean(~jedna_zmiana, cbop_svy_cal)
 ```
 
 # Wykorzystanie pakietu `nonprobsvy`
-
 
 # Badanie symulacyjne
