@@ -18,6 +18,10 @@
     + masowa imputacja -- model
 7. Metody podwójnie odporne (ang. *doubly robust estimators*)  [materiały do zajęć](https://htmlpreview.github.io/?https://github.com/DepartmentOfStatisticsPUE/bi-2023/blob/main/notebooks/09-dr.html)
 
+## Projekt
+
+[Szablon projektu](zaliczenie/szablon.qmd)
+
 ## Opis zbioru danych
 
 Dane zawierają następujące kolumny
